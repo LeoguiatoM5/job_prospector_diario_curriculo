@@ -1,8 +1,8 @@
 # QA Job Prospector
 
-Automação em Node.js para localizar vagas remotas de Quality Assurance disponíveis para pessoas no Brasil, identificar canais públicos de candidatura e, quando houver um e-mail de recrutamento, enviar o currículo por SMTP.
+Automação em Node.js para localizar vagas disponíveis para pessoas no Brasil conforme a busca que o usuário deseja, identificar canais públicos de candidatura e, quando houver um e-mail de recrutamento, enviar o currículo por SMTP.
 
-> **Atenção:** o envio de candidaturas pode ser real. Antes de usar `--send` ou `npm run daily`, revise o destinatário, o currículo, o texto da mensagem e todas as variáveis SMTP. Comece sempre pelo modo `--dry-run`.
+> **Atenção:** o envio de candidaturas é real. Antes de usar `--send` ou `npm run daily`, revise o destinatário, o currículo, o texto da mensagem e todas as variáveis SMTP. Comece sempre pelo modo `--dry-run`.
 
 ## Como funciona
 
@@ -156,12 +156,12 @@ Por segurança, não use esse comando até validar a configuração com `--dry-r
 
 ## Scripts disponíveis
 
-| Comando | Descrição |
-| --- | --- |
-| `npm start` | Pesquisa e registra vagas válidas |
-| `npm run dev` | Executa a prospecção com modo watch |
-| `npm run apply:email -- ...` | Simula ou envia candidaturas por e-mail |
-| `npm run daily` | Prospecta vagas e envia todas as candidaturas pendentes |
+| Comando                      | Descrição                                               |
+| ---------------------------- | ------------------------------------------------------- |
+| `npm start`                  | Pesquisa e registra vagas válidas                       |
+| `npm run dev`                | Executa a prospecção com modo watch                     |
+| `npm run apply:email -- ...` | Simula ou envia candidaturas por e-mail                 |
+| `npm run daily`              | Prospecta vagas e envia todas as candidaturas pendentes |
 
 ## Execução com Docker
 
@@ -287,11 +287,11 @@ Para realizar envios, o currículo também precisa existir dentro do container n
 
 Em **Settings**, configure o **Start Command** conforme o comportamento desejado:
 
-| Objetivo | Start Command |
-| --- | --- |
-| Apenas prospectar e registrar vagas | `npm start` |
-| Prospectar e enviar candidaturas pendentes | `npm run daily` |
-| Conferir candidaturas sem enviar | `npm run apply:email -- --all-pending --dry-run` |
+| Objetivo                                   | Start Command                                    |
+| ------------------------------------------ | ------------------------------------------------ |
+| Apenas prospectar e registrar vagas        | `npm start`                                      |
+| Prospectar e enviar candidaturas pendentes | `npm run daily`                                  |
+| Conferir candidaturas sem enviar           | `npm run apply:email -- --all-pending --dry-run` |
 
 O `Dockerfile` usa `npm start` por padrão. Portanto, é necessário sobrescrever o Start Command para `npm run daily` caso queira que o Railway também envie as candidaturas.
 
