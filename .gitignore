@@ -9,7 +9,7 @@ jobs.sqlite
 logs/
 *.log
 
-assets/*.pdf
+assets/
 
 .DS_Store
 Thumbs.db

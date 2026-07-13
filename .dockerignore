@@ -1,0 +1,11 @@
+node_modules
+.env
+
+*.sqlite
+*.sqlite3
+
+logs
+assets
+
+.git
+.gitignore
