@@ -1,4 +1,4 @@
-# Job Prospector
+# QA Job Prospector
 
 Automação em Node.js para localizar vagas disponíveis para pessoas no Brasil conforme a busca que o usuário deseja, identificar canais públicos de candidatura e, quando houver um e-mail de recrutamento, enviar o currículo por SMTP.
 
@@ -13,7 +13,7 @@ O projeto executa o seguinte fluxo:
 3. Valida a regra de negócio:
 
    ```text
-   QA + REMOTO + BRASIL = VAGA VÁLIDA
+   EXEMPLO : QA + REMOTO + BRASIL = VAGA VÁLIDA
    ```
 
 4. Tenta identificar o site oficial da empresa.
@@ -45,7 +45,7 @@ Clone o repositório e instale as dependências:
 
 ```bash
 git clone <URL_DO_REPOSITORIO>
-cd qa-job-prospector
+cd job-prospector
 npm ci
 ```
 
