@@ -1,0 +1,15 @@
+node_modules/
+
+.env
+
+*.sqlite
+*.sqlite3
+jobs.sqlite
+
+logs/
+*.log
+
+assets/*.pdf
+
+.DS_Store
+Thumbs.db
