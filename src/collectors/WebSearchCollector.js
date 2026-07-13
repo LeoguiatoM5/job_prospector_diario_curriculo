@@ -3,6 +3,7 @@ import axios from "axios";
 class WebSearchCollector {
   constructor() {
     this.apiUrl = "https://api.langsearch.com/v1/web-search";
+    this.requestInterval = 1100;
   }
 
   async search(query) {
@@ -50,29 +51,44 @@ class WebSearchCollector {
 
   async collect(queries) {
     const allResults = [];
+    let successfulSearches = 0;
 
     for (const query of queries) {
       try {
         const results = await this.search(query);
 
+        successfulSearches++;
+
         console.log(`Resultados encontrados: ${results.length}`);
         console.log("");
 
         allResults.push(...results);
-
-        await this.wait(1100);
       } catch (error) {
         console.error(`Erro na busca: ${query}`);
 
         if (error.response) {
           console.error(`HTTP: ${error.response.status}`);
           console.error(error.response.data);
+
+          if (error.response.status === 429) {
+            throw new Error(
+              "LANGSEARCH_REQUEST_LIMIT: limite de requisições atingido.",
+            );
+          }
         } else {
           console.error(error.message);
         }
 
         console.log("");
+      } finally {
+        await this.wait(this.requestInterval);
       }
+    }
+
+    if (successfulSearches === 0) {
+      throw new Error(
+        "LANGSEARCH_INDISPONIVEL: nenhuma busca foi concluída com sucesso.",
+      );
     }
 
     return allResults;

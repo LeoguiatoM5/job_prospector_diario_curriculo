@@ -115,7 +115,9 @@ async function start() {
     if (!contact?.found) {
       channelsNotFound++;
       console.log("CANAL   : NÃO LOCALIZADO");
-      console.log(`MOTIVO  : ${contact?.reason || "IDENTIDADE_NAO_LOCALIZADA"}`);
+      console.log(
+        `MOTIVO  : ${contact?.reason || "IDENTIDADE_NAO_LOCALIZADA"}`,
+      );
     } else {
       channelsFound++;
       console.log("CANAL   : LOCALIZADO");
@@ -167,4 +169,7 @@ start().catch((error) => {
   console.error("");
   console.error("ERRO NA EXECUÇÃO:");
   console.error(error);
+  console.error("");
+
+  process.exitCode = 1;
 });
