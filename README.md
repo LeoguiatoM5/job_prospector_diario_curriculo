@@ -1,4 +1,4 @@
-# QA Job Prospector
+# Job Prospector
 
 Automação em Node.js para localizar vagas disponíveis para pessoas no Brasil conforme a busca que o usuário deseja, identificar canais públicos de candidatura e, quando houver um e-mail de recrutamento, enviar o currículo por SMTP.
 
