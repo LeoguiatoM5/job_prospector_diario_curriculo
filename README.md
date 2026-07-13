@@ -168,7 +168,7 @@ Por segurança, não use esse comando até validar a configuração com `--dry-r
 Crie a imagem:
 
 ```bash
-docker build -t qa-job-prospector .
+docker build -t job-prospector .
 ```
 
 Execute apenas a prospecção, persistindo o banco em um volume local:
@@ -202,7 +202,7 @@ No PowerShell, substitua `$(pwd)` por `${PWD}` se necessário.
 No PowerShell, acesse a pasta do projeto:
 
 ```powershell
-cd D:\caminho\para\qa-job-prospector
+cd D:\caminho\para\job-prospector
 npm ci
 ```
 
