@@ -17,10 +17,21 @@ class ContactDiscoveryService {
     const domain = companyIdentity.domain;
 
     const pages = this.buildCandidatePages(site);
+    const queued = new Set(pages);
+    const visited = new Set();
+    const maxPages = 30;
 
     const channels = [];
 
-    for (const pageUrl of pages) {
+    while (pages.length > 0 && visited.size < maxPages) {
+      const pageUrl = pages.shift();
+      const normalizedUrl = this.normalizeUrl(pageUrl);
+
+      if (!normalizedUrl || visited.has(normalizedUrl)) {
+        continue;
+      }
+
+      visited.add(normalizedUrl);
       console.log(`Analisando contato: ${pageUrl}`);
 
       const page = await PageContentCollector.collect(pageUrl, {
@@ -30,7 +41,10 @@ class ContactDiscoveryService {
         continue;
       }
 
-      const emails = this.extractEmails(page.textoInstitucional || "", domain);
+      const emails = this.extractEmails(
+        `${page.textoInstitucional || ""} ${(page.mailtoEmails || []).join(" ")}`,
+        domain,
+      );
 
       if (emails.length > 0) {
         return {
@@ -49,13 +63,23 @@ class ContactDiscoveryService {
           ...this.classifyLinks(page.links || [], domain, page.link),
           ...this.classifyContactForm(page, domain, page.link),
         );
+
+        const discoveredLinks = this.getExplorableLinks(
+          page.links || [],
+          domain,
+        );
+
+        for (const link of discoveredLinks.reverse()) {
+          const url = this.normalizeUrl(link.href);
+
+          if (url && !visited.has(url) && !queued.has(url)) {
+            queued.add(url);
+            // Links relevantes encontrados na própria página têm prioridade
+            // sobre os caminhos genéricos ainda não testados.
+            pages.unshift(url);
+          }
+        }
       }
-    }
-
-    const channel = this.getBestChannel(channels);
-
-    if (channel) {
-      return channel;
     }
 
     const webContact =
@@ -63,6 +87,12 @@ class ContactDiscoveryService {
 
     if (webContact.found) {
       return webContact;
+    }
+
+    const channel = this.getBestChannel(channels);
+
+    if (channel) {
+      return channel;
     }
 
     return {
@@ -86,6 +116,21 @@ class ContactDiscoveryService {
       "/contato/",
       "/contact",
       "/contact/",
+      "/fale-conosco",
+      "/fale-conosco/",
+      "/sobre",
+      "/sobre-nos",
+      "/empresa",
+      "/quem-somos",
+      "/about",
+      "/about-us",
+      "/team",
+      "/people",
+      "/talentos",
+      "/oportunidades",
+      "/vagas-abertas",
+      "/join-us",
+      "/work-with-us",
     ];
 
     return [
@@ -99,6 +144,45 @@ class ContactDiscoveryService {
         }),
       ),
     ].filter(Boolean);
+  }
+
+  getExplorableLinks(links, companyDomain) {
+    const relevantTerms = [
+      "contact", "contato", "fale conosco", "careers", "career",
+      "carreira", "carreiras", "jobs", "vagas", "oportunidades",
+      "trabalhe conosco", "work with us", "join us", "talent", "talentos",
+      "people", "pessoas", "team", "equipe", "about", "sobre",
+      "quem somos", "empresa", "company", "recruit", "rh",
+    ];
+
+    return links
+      .filter((link) => this.isOfficialDomain(link.domain, companyDomain))
+      .filter((link) => {
+        const context = this.normalize(`${link.text || ""} ${link.href || ""}`);
+        return this.containsAny(context, relevantTerms);
+      })
+      .sort((a, b) => {
+        const score = (link) => {
+          const context = this.normalize(`${link.text || ""} ${link.href || ""}`);
+          return relevantTerms.reduce(
+            (total, term) => total + (context.includes(term) ? 1 : 0),
+            0,
+          );
+        };
+        return score(b) - score(a);
+      });
+  }
+
+  normalizeUrl(value) {
+    try {
+      const url = new URL(value);
+      url.hash = "";
+      url.search = "";
+      url.pathname = url.pathname.replace(/\/+$/, "") || "/";
+      return url.href;
+    } catch {
+      return null;
+    }
   }
 
   classifyLinks(links, companyDomain, sourceUrl) {

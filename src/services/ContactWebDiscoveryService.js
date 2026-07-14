@@ -1,4 +1,5 @@
 import WebSearchCollector from "../collectors/WebSearchCollector.js";
+import PageContentCollector from "../collectors/PageContentCollector.js";
 
 class ContactWebDiscoveryService {
   async discover(companyIdentity) {
@@ -25,24 +26,29 @@ class ContactWebDiscoveryService {
 
       for (const result of results) {
         const emails = this.extractEmails(
-          `${result.titulo || ""} ${result.snippet || ""}`,
+          `${result.titulo || ""} ${result.snippet || ""} ${result.resumo || ""}`,
           companyDomain,
         );
 
-        if (emails.length === 0) {
-          continue;
+        if (emails.length > 0) {
+          return this.createResult(emails, result.link, query);
         }
 
-        return {
-          found: true,
-          type: "EMAIL",
-          value: emails[0],
-          email: emails[0],
-          emails,
-          source: "WEB_FALLBACK",
-          sourceUrl: result.link,
-          query,
-        };
+        if (!this.belongsToOfficialSite(result.link, companyDomain)) continue;
+
+        const page = await PageContentCollector.collect(result.link, {
+          includeInstitutionalText: true,
+        });
+        if (!page?.success) continue;
+
+        const pageEmails = this.extractEmails(
+          `${page.textoInstitucional || ""} ${(page.mailtoEmails || []).join(" ")}`,
+          companyDomain,
+        );
+
+        if (pageEmails.length > 0) {
+          return this.createResult(pageEmails, page.link || result.link, query);
+        }
       }
 
       await this.wait(1100);
@@ -56,6 +62,8 @@ class ContactWebDiscoveryService {
 
   buildQueries(companyName, companyDomain) {
     return [
+      `site:${companyDomain} (recrutamento OR RH OR talentos OR carreiras) email`,
+      `site:${companyDomain} (contato OR "fale conosco" OR "trabalhe conosco")`,
       `"${companyName}" recrutamento email`,
       `"${companyName}" RH email`,
       `"${companyName}" talentos email`,
@@ -65,6 +73,28 @@ class ContactWebDiscoveryService {
       `"@${companyDomain}" recrutamento`,
       `"@${companyDomain}" careers`,
     ];
+  }
+
+  belongsToOfficialSite(value, companyDomain) {
+    try {
+      const domain = new URL(value).hostname.replace(/^www\./, "").toLowerCase();
+      return domain === companyDomain || domain.endsWith(`.${companyDomain}`);
+    } catch {
+      return false;
+    }
+  }
+
+  createResult(emails, sourceUrl, query) {
+    return {
+      found: true,
+      type: "EMAIL",
+      value: emails[0],
+      email: emails[0],
+      emails,
+      source: "WEB_FALLBACK",
+      sourceUrl,
+      query,
+    };
   }
 
   extractEmails(text, companyDomain) {

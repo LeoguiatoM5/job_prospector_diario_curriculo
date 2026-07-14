@@ -41,6 +41,8 @@ class PageContentCollector {
 
       const links = this.extractLinks($, finalUrl);
 
+      const mailtoEmails = this.extractMailtoEmails($);
+
       const hasPublicForm = $("form").length > 0;
 
       const textoInstitucional = options.includeInstitutionalText
@@ -97,6 +99,7 @@ class PageContentCollector {
         texto: text,
         textoInstitucional,
         links,
+        mailtoEmails,
         hasPublicForm,
         jobPosting,
         link: finalUrl,
@@ -233,6 +236,23 @@ class PageContentCollector {
     });
 
     return [...links.values()];
+  }
+
+  extractMailtoEmails($) {
+    const emails = [];
+
+    $('a[href^="mailto:"]').each((_, element) => {
+      const href = String($(element).attr("href") || "");
+      const address = href.slice(7).split("?")[0].trim();
+
+      try {
+        emails.push(decodeURIComponent(address));
+      } catch {
+        emails.push(address);
+      }
+    });
+
+    return [...new Set(emails.filter(Boolean))];
   }
 
   detectUnavailablePage(title, text) {
