@@ -376,6 +376,10 @@ class ContactDiscoveryService {
       "press",
       "legal",
       "juridico",
+      "info",
+      "hello",
+      "contato",
+      "contact",
     ];
 
     const prefix = email.split("@")[0];
