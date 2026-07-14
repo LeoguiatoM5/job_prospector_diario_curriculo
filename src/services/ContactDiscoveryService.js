@@ -364,6 +364,18 @@ class ContactDiscoveryService {
       "security",
       "suporte",
       "support",
+      "comercial",
+      "vendas",
+      "sales",
+      "financeiro",
+      "finance",
+      "faturamento",
+      "billing",
+      "marketing",
+      "imprensa",
+      "press",
+      "legal",
+      "juridico",
     ];
 
     const prefix = email.split("@")[0];

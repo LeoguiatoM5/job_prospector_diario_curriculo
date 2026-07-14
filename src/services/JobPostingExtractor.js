@@ -9,11 +9,15 @@ class JobPostingExtractor {
     }
 
     const cargo = this.cleanHtml(data.title);
-
     const empresa = this.cleanHtml(data.hiringOrganization?.name);
 
-    const remoto = this.isRemote(data);
+    if (this.isInvalidCompanyName(empresa)) {
+      console.log(`Empresa inválida ignorada: ${empresa}`);
 
+      return null;
+    }
+
+    const remoto = this.isRemote(data);
     const brasil = this.isAvailableInBrazil(data);
 
     return {
@@ -63,6 +67,29 @@ class JobPostingExtractor {
     const normalized = String(value).trim().toLowerCase();
 
     return ["br", "brasil", "brazil"].includes(normalized);
+  }
+
+  isInvalidCompanyName(value) {
+    const normalized = String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const invalidNames = new Set([
+      "unlock with premium",
+      "come work with us",
+      "work with us",
+      "join us",
+      "join our team",
+      "confidential company",
+      "company confidential",
+      "empresa confidencial",
+    ]);
+
+    return invalidNames.has(normalized);
   }
 
   cleanHtml(value) {

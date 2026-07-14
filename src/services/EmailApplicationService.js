@@ -1,15 +1,15 @@
+import fs from "node:fs";
 import path from "node:path";
-import nodemailer from "nodemailer";
+
+import { google } from "googleapis";
 
 class EmailApplicationService {
   validateConfiguration() {
     const requiredVariables = [
-      "SMTP_HOST",
-      "SMTP_PORT",
-      "SMTP_SECURE",
-      "SMTP_USER",
-      "SMTP_PASS",
-      "SMTP_FROM",
+      "GMAIL_CLIENT_ID",
+      "GMAIL_CLIENT_SECRET",
+      "GMAIL_REFRESH_TOKEN",
+      "GMAIL_FROM",
     ];
 
     const missingVariables = requiredVariables.filter(
@@ -17,77 +17,135 @@ class EmailApplicationService {
     );
 
     if (missingVariables.length > 0) {
-      throw new Error(`SMTP_NAO_CONFIGURADO: ${missingVariables.join(", ")}`);
-    }
-
-    const port = Number(process.env.SMTP_PORT);
-
-    if (!Number.isInteger(port) || port <= 0 || port > 65535) {
-      throw new Error("SMTP_PORT_INVALIDA");
-    }
-
-    const secureValue = process.env.SMTP_SECURE.trim().toLowerCase();
-
-    if (!["true", "false"].includes(secureValue)) {
-      throw new Error("SMTP_SECURE_INVALIDO. Use true ou false.");
+      throw new Error(
+        `GMAIL_API_NAO_CONFIGURADA: ${missingVariables.join(", ")}`,
+      );
     }
 
     return {
-      host: process.env.SMTP_HOST.trim(),
-      port,
-      secure: secureValue === "true",
-      user: process.env.SMTP_USER.trim(),
-      pass: process.env.SMTP_PASS,
-      from: process.env.SMTP_FROM.trim(),
+      clientId: process.env.GMAIL_CLIENT_ID.trim(),
+      clientSecret: process.env.GMAIL_CLIENT_SECRET.trim(),
+      refreshToken: process.env.GMAIL_REFRESH_TOKEN.trim(),
+      from: process.env.GMAIL_FROM.trim(),
     };
   }
 
-  createTransporter(config) {
-    return nodemailer.createTransport({
-      host: config.host,
-      port: config.port,
-      secure: config.secure,
-      auth: {
-        user: config.user,
-        pass: config.pass,
-      },
+  createOAuthClient(config) {
+    const oauth2Client = new google.auth.OAuth2(
+      config.clientId,
+      config.clientSecret,
+    );
+
+    oauth2Client.setCredentials({
+      refresh_token: config.refreshToken,
     });
+
+    return oauth2Client;
+  }
+
+  createGmailClient(config) {
+    return google.gmail({
+      version: "v1",
+      auth: this.createOAuthClient(config),
+    });
+  }
+
+  encodeHeader(value) {
+    return `=?UTF-8?B?${Buffer.from(value, "utf8").toString("base64")}?=`;
+  }
+
+  encodeBase64Lines(value) {
+    const encoded = Buffer.from(value).toString("base64");
+
+    return encoded.match(/.{1,76}/g)?.join("\r\n") || "";
+  }
+
+  buildMimeMessage({ from, to, subject, body, resumePath }) {
+    const boundary = [
+      "qa-job-prospector",
+      Date.now(),
+      Math.random().toString(16).slice(2),
+    ].join("-");
+
+    const filename = path.basename(resumePath);
+
+    const bodyBase64 = this.encodeBase64Lines(Buffer.from(body, "utf8"));
+
+    const resumeBase64 = this.encodeBase64Lines(fs.readFileSync(resumePath));
+
+    const mimeMessage = [
+      `From: ${from}`,
+      `To: ${to}`,
+      `Subject: ${this.encodeHeader(subject)}`,
+      "MIME-Version: 1.0",
+      `Content-Type: multipart/mixed; boundary="${boundary}"`,
+      "",
+      `--${boundary}`,
+      'Content-Type: text/plain; charset="UTF-8"',
+      "Content-Transfer-Encoding: base64",
+      "",
+      bodyBase64,
+      "",
+      `--${boundary}`,
+      `Content-Type: application/pdf; name="${filename}"`,
+      "Content-Transfer-Encoding: base64",
+      `Content-Disposition: attachment; filename="${filename}"`,
+      "",
+      resumeBase64,
+      "",
+      `--${boundary}--`,
+      "",
+    ].join("\r\n");
+
+    return Buffer.from(mimeMessage, "utf8").toString("base64url");
   }
 
   async verify() {
     const config = this.validateConfiguration();
-    const transporter = this.createTransporter(config);
+    const oauth2Client = this.createOAuthClient(config);
 
-    await transporter.verify();
+    await oauth2Client.getAccessToken();
 
     return {
       verified: true,
-      user: config.user,
+      user: config.from,
     };
   }
 
   async send({ to, subject, body, resumePath }) {
     const config = this.validateConfiguration();
-    const transporter = this.createTransporter(config);
 
-    const info = await transporter.sendMail({
+    if (!fs.existsSync(resumePath)) {
+      throw new Error(`CURRICULO_NAO_ENCONTRADO: ${resumePath}`);
+    }
+
+    const gmail = this.createGmailClient(config);
+
+    const raw = this.buildMimeMessage({
       from: config.from,
       to,
       subject,
-      text: body,
-      attachments: [
-        {
-          filename: path.basename(resumePath),
-          path: resumePath,
-          contentType: "application/pdf",
-        },
-      ],
+      body,
+      resumePath,
     });
 
+    const response = await gmail.users.messages.send({
+      userId: "me",
+      requestBody: {
+        raw,
+      },
+    });
+
+    const messageId = response.data.id || null;
+
+    if (!messageId) {
+      throw new Error("GMAIL_API_NAO_RETORNOU_MESSAGE_ID");
+    }
+
     return {
-      messageId: info.messageId || null,
-      accepted: info.accepted || [],
-      rejected: info.rejected || [],
+      messageId,
+      accepted: [to],
+      rejected: [],
     };
   }
 }
