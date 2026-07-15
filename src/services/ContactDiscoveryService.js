@@ -148,11 +148,32 @@ class ContactDiscoveryService {
 
   getExplorableLinks(links, companyDomain) {
     const relevantTerms = [
-      "contact", "contato", "fale conosco", "careers", "career",
-      "carreira", "carreiras", "jobs", "vagas", "oportunidades",
-      "trabalhe conosco", "work with us", "join us", "talent", "talentos",
-      "people", "pessoas", "team", "equipe", "about", "sobre",
-      "quem somos", "empresa", "company", "recruit", "rh",
+      "contact",
+      "contato",
+      "fale conosco",
+      "careers",
+      "career",
+      "carreira",
+      "carreiras",
+      "jobs",
+      "vagas",
+      "oportunidades",
+      "trabalhe conosco",
+      "work with us",
+      "join us",
+      "talent",
+      "talentos",
+      "people",
+      "pessoas",
+      "team",
+      "equipe",
+      "about",
+      "sobre",
+      "quem somos",
+      "empresa",
+      "company",
+      "recruit",
+      "rh",
     ];
 
     return links
@@ -163,7 +184,9 @@ class ContactDiscoveryService {
       })
       .sort((a, b) => {
         const score = (link) => {
-          const context = this.normalize(`${link.text || ""} ${link.href || ""}`);
+          const context = this.normalize(
+            `${link.text || ""} ${link.href || ""}`,
+          );
           return relevantTerms.reduce(
             (total, term) => total + (context.includes(term) ? 1 : 0),
             0,
@@ -464,6 +487,7 @@ class ContactDiscoveryService {
       "hello",
       "contato",
       "contact",
+      "ciant",
     ];
 
     const prefix = email.split("@")[0];
