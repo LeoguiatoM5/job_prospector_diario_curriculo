@@ -4,6 +4,16 @@ import path from "node:path";
 import { google } from "googleapis";
 
 class EmailApplicationService {
+  isBlockedRecipient(to) {
+    return String(to || "").toLowerCase().includes("ciant");
+  }
+
+  validateRecipient(to) {
+    if (this.isBlockedRecipient(to)) {
+      throw new Error("DESTINATARIO_BLOQUEADO: CIANT");
+    }
+  }
+
   validateConfiguration() {
     const requiredVariables = [
       "GMAIL_CLIENT_ID",
@@ -115,6 +125,8 @@ class EmailApplicationService {
   }
 
   async send({ to, subject, body, resumePath }) {
+    this.validateRecipient(to);
+
     const config = this.validateConfiguration();
 
     if (resumePath && !fs.existsSync(resumePath)) {

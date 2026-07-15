@@ -51,6 +51,8 @@ function validateJob(job) {
     throw new Error("EMAIL_NAO_DISPONIVEL");
   }
 
+  EmailApplicationService.validateRecipient(job.email);
+
   if (job.application_status === "ENVIADA") {
     throw new Error("CANDIDATURA_JA_ENVIADA");
   }
