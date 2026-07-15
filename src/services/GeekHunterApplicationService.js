@@ -125,29 +125,46 @@ class GeekHunterApplicationService {
     const browser = await this.openBrowser();
     try {
       const page = await browser.newPage({ locale: "pt-BR" });
-      await page.goto("https://www.geekhunter.com/pt/vagas", {
-        waitUntil: "networkidle",
-        timeout: 45000,
-      });
-      const search = page.getByPlaceholder(
-        "Buscar por cargo, competência, empresa, palavra-chave...",
-      );
-      await search.fill("QA");
-      await page.waitForTimeout(2500);
+      const jobs = new Map();
+      const maxPages = Number(process.env.GEEKHUNTER_MAX_PAGES) || 20;
 
-      const cards = await page.locator('a[aria-label="Visualizar vaga"]').evaluateAll(
-        (elements) => elements.map((element) => ({
-          url: element.href,
-          text: element.innerText,
-          title: element.innerText.split("\n").map((item) => item.trim()).find(Boolean) || "",
-        })),
-      );
-      const qaTitle = /(?:^|\b)(qa|quality assurance|analista de testes?|test engineer|sdet)(?:\b|$)/i;
+      for (let pageNumber = 1; pageNumber <= maxPages; pageNumber++) {
+        const searchUrl = new URL("https://www.geekhunter.com/pt/vagas");
+        searchUrl.searchParams.set("searchTerm", "QA");
+        searchUrl.searchParams.set("page", String(pageNumber));
 
-      return [...new Map(cards
-        .filter((card) => qaTitle.test(card.title))
-        .filter((card) => /\bremoto\b|\bremote\b/i.test(card.text))
-        .map((card) => [card.url, card])).values()];
+        console.log(`Buscando vagas GeekHunter: página ${pageNumber}`);
+
+        await page.goto(searchUrl.href, {
+          waitUntil: "domcontentloaded",
+          timeout: 45000,
+        });
+        await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
+        await page.locator('a[aria-label="Visualizar vaga"]').first()
+          .waitFor({ state: "attached", timeout: 10000 })
+          .catch(() => {});
+
+        const cards = await page.locator('a[aria-label="Visualizar vaga"]').evaluateAll(
+          (elements) => elements.map((element) => ({
+            url: element.href,
+            text: element.innerText,
+            title: element.innerText.split("\n").map((item) => item.trim()).find(Boolean) || "",
+          })),
+        );
+        const previousSize = jobs.size;
+
+        for (const card of cards) {
+          if (card.url) jobs.set(card.url, card);
+        }
+
+        console.log(
+          `Vagas encontradas na página: ${cards.length}; novas: ${jobs.size - previousSize}`,
+        );
+
+        if (cards.length === 0 || jobs.size === previousSize) break;
+      }
+
+      return [...jobs.values()];
     } finally {
       await browser.close();
     }

@@ -170,6 +170,9 @@ com perguntas adicionais não são respondidas automaticamente: a URL é enviada
 para `GEEKHUNTER_CANDIDATE_EMAIL`. O SQLite registra as URLs processadas para
 evitar novos envios nos próximos cron jobs.
 
+A busca percorre as páginas de resultados para o termo `QA`. O limite padrão é
+de 20 páginas e pode ser ajustado com `GEEKHUNTER_MAX_PAGES`.
+
 ## Execução com Docker
 
 A imagem instala Chromium e define `CHROME_PATH=/usr/bin/chromium`. No deploy,
