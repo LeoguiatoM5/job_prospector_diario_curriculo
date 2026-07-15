@@ -67,13 +67,8 @@ class EmailApplicationService {
       Math.random().toString(16).slice(2),
     ].join("-");
 
-    const filename = path.basename(resumePath);
-
     const bodyBase64 = this.encodeBase64Lines(Buffer.from(body, "utf8"));
-
-    const resumeBase64 = this.encodeBase64Lines(fs.readFileSync(resumePath));
-
-    const mimeMessage = [
+    const parts = [
       `From: ${from}`,
       `To: ${to}`,
       `Subject: ${this.encodeHeader(subject)}`,
@@ -85,17 +80,24 @@ class EmailApplicationService {
       "Content-Transfer-Encoding: base64",
       "",
       bodyBase64,
-      "",
-      `--${boundary}`,
-      `Content-Type: application/pdf; name="${filename}"`,
-      "Content-Transfer-Encoding: base64",
-      `Content-Disposition: attachment; filename="${filename}"`,
-      "",
-      resumeBase64,
-      "",
-      `--${boundary}--`,
-      "",
-    ].join("\r\n");
+    ];
+
+    if (resumePath) {
+      const filename = path.basename(resumePath);
+      const resumeBase64 = this.encodeBase64Lines(fs.readFileSync(resumePath));
+      parts.push(
+        "",
+        `--${boundary}`,
+        `Content-Type: application/pdf; name="${filename}"`,
+        "Content-Transfer-Encoding: base64",
+        `Content-Disposition: attachment; filename="${filename}"`,
+        "",
+        resumeBase64,
+      );
+    }
+
+    parts.push("", `--${boundary}--`, "");
+    const mimeMessage = parts.join("\r\n");
 
     return Buffer.from(mimeMessage, "utf8").toString("base64url");
   }
@@ -115,7 +117,7 @@ class EmailApplicationService {
   async send({ to, subject, body, resumePath }) {
     const config = this.validateConfiguration();
 
-    if (!fs.existsSync(resumePath)) {
+    if (resumePath && !fs.existsSync(resumePath)) {
       throw new Error(`CURRICULO_NAO_ENCONTRADO: ${resumePath}`);
     }
 

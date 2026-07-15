@@ -14,6 +14,9 @@ class JobValidator {
       "qa automation",
       "automation tester",
       "quality engineer",
+      "sdet",
+      "software development engineer in test",
+      "test automation engineer",
     ];
 
     this.remoteTerms = [

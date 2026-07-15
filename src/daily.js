@@ -60,6 +60,12 @@ async function start() {
     "ETAPA 2 - CANDIDATURAS POR EMAIL",
   );
 
+  await runNode(
+    "src/runGeekHunter.js",
+    ["--send"],
+    "ETAPA 3 - CANDIDATURAS GEEKHUNTER",
+  );
+
   const finishedAt = new Date();
 
   console.log("");
