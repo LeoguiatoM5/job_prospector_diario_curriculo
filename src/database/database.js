@@ -29,8 +29,26 @@ function initializeDatabase() {
         return;
       }
 
-      ensureColumns().then(resolve).catch(reject);
+      ensureColumns()
+        .then(ensureGeekHunterApplicationsTable)
+        .then(resolve)
+        .catch(reject);
     });
+  });
+}
+
+function ensureGeekHunterApplicationsTable() {
+  return new Promise((resolve, reject) => {
+    database.run(`
+      CREATE TABLE IF NOT EXISTS geekhunter_applications (
+        url TEXT PRIMARY KEY,
+        title TEXT,
+        status TEXT NOT NULL,
+        error TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `, (error) => error ? reject(error) : resolve());
   });
 }
 

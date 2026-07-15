@@ -161,9 +161,21 @@ Por segurança, não use esse comando até validar a configuração com `--dry-r
 | `npm start`                  | Pesquisa e registra vagas válidas                       |
 | `npm run dev`                | Executa a prospecção com modo watch                     |
 | `npm run apply:email -- ...` | Simula ou envia candidaturas por e-mail                 |
+| `npm run apply:geekhunter -- ...` | Valida ou envia uma candidatura pública da GeekHunter |
+| `npm run run:geekhunter -- ...` | Busca QA remoto na GeekHunter e processa as candidaturas |
 | `npm run daily`              | Prospecta vagas e envia todas as candidaturas pendentes |
 
+No fluxo diário, a GeekHunter roda depois das candidaturas por e-mail. Vagas
+com perguntas adicionais não são respondidas automaticamente: a URL é enviada
+para `GEEKHUNTER_CANDIDATE_EMAIL`. O SQLite registra as URLs processadas para
+evitar novos envios nos próximos cron jobs.
+
 ## Execução com Docker
+
+A imagem instala Chromium e define `CHROME_PATH=/usr/bin/chromium`. No deploy,
+configure também todas as variáveis `GEEKHUNTER_*` apresentadas no
+`.env.example`, mantenha `DATABASE_PATH` em volume persistente e disponibilize o
+currículo indicado por `RESUME_PATH` dentro do container.
 
 Crie a imagem:
 
