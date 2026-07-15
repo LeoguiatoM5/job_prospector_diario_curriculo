@@ -22,7 +22,22 @@ class ContactWebDiscoveryService {
     for (const query of queries) {
       console.log(`Buscando contato: ${query}`);
 
-      const results = await WebSearchCollector.search(query);
+      let results;
+
+      try {
+        results = await WebSearchCollector.searchWithRetry(query);
+      } catch (error) {
+        if (WebSearchCollector.isRateLimitError(error)) {
+          throw new Error(
+            "LANGSEARCH_REQUEST_LIMIT: limite de requisições atingido.",
+            { cause: error },
+          );
+        }
+
+        this.logSearchError(query, error);
+        await this.wait(1100);
+        continue;
+      }
 
       for (const result of results) {
         const emails = this.extractEmails(
@@ -168,6 +183,15 @@ class ContactWebDiscoveryService {
     return new Promise((resolve) => {
       setTimeout(resolve, milliseconds);
     });
+  }
+
+  logSearchError(query, error) {
+    const status = error?.response?.status;
+    const message = error?.response?.data?.message || error?.message;
+
+    console.error(
+      `Falha ao buscar contato para ${query}${status ? ` (HTTP ${status})` : ""}: ${message}`,
+    );
   }
 }
 

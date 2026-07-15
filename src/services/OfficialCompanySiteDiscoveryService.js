@@ -26,7 +26,28 @@ class OfficialCompanySiteDiscoveryService {
     );
 
     for (const query of queries) {
-      const results = await WebSearchCollector.search(query);
+      let results;
+
+      try {
+        results = await WebSearchCollector.searchWithRetry(query);
+      } catch (error) {
+        if (WebSearchCollector.isRateLimitError(error)) {
+          throw new Error(
+            "LANGSEARCH_REQUEST_LIMIT: limite de requisições atingido.",
+            { cause: error },
+          );
+        }
+
+        const status = error?.response?.status;
+        const message = error?.response?.data?.message || error?.message;
+
+        console.error(
+          `Falha ao localizar site oficial${status ? ` (HTTP ${status})` : ""}: ${message}`,
+        );
+
+        await this.wait(1100);
+        continue;
+      }
 
       for (const result of results) {
         const candidate = this.createCandidate(

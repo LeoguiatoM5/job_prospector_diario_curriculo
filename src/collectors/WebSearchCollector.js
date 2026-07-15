@@ -4,6 +4,7 @@ class WebSearchCollector {
   constructor() {
     this.apiUrl = "https://api.langsearch.com/v1/web-search";
     this.requestInterval = 1100;
+    this.maxAttempts = 3;
   }
 
   async search(query) {
@@ -49,13 +50,53 @@ class WebSearchCollector {
     }));
   }
 
+  async searchWithRetry(query) {
+    for (let attempt = 1; attempt <= this.maxAttempts; attempt++) {
+      try {
+        return await this.search(query);
+      } catch (error) {
+        if (this.isRateLimitError(error) || !this.isRetryableError(error)) {
+          throw error;
+        }
+
+        if (attempt === this.maxAttempts) {
+          throw error;
+        }
+
+        const delay = this.requestInterval * attempt;
+
+        console.warn(
+          `Falha temporária na busca. Nova tentativa ${attempt + 1}/${this.maxAttempts} em ${delay}ms.`,
+        );
+
+        await this.wait(delay);
+      }
+    }
+  }
+
+  isRateLimitError(error) {
+    return error?.response?.status === 429;
+  }
+
+  isRetryableError(error) {
+    const status = error?.response?.status;
+
+    return (
+      status >= 500 ||
+      error?.code === "ECONNABORTED" ||
+      error?.code === "ETIMEDOUT" ||
+      error?.code === "ECONNRESET" ||
+      error?.code === "ENOTFOUND"
+    );
+  }
+
   async collect(queries) {
     const allResults = [];
     let successfulSearches = 0;
 
     for (const query of queries) {
       try {
-        const results = await this.search(query);
+        const results = await this.searchWithRetry(query);
 
         successfulSearches++;
 
@@ -70,7 +111,7 @@ class WebSearchCollector {
           console.error(`HTTP: ${error.response.status}`);
           console.error(error.response.data);
 
-          if (error.response.status === 429) {
+          if (this.isRateLimitError(error)) {
             throw new Error(
               "LANGSEARCH_REQUEST_LIMIT: limite de requisições atingido.",
             );

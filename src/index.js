@@ -74,7 +74,24 @@ async function start() {
       continue;
     }
 
-    const pipelineResult = await JobPipeline.process(job, page);
+    let pipelineResult;
+
+    try {
+      pipelineResult = await JobPipeline.process(job, page);
+    } catch (error) {
+      if (
+        error?.message?.startsWith("LANGSEARCH_REQUEST_LIMIT") ||
+        error?.cause?.response?.status === 429
+      ) {
+        throw error;
+      }
+
+      console.error("Falha ao processar vaga; seguindo para a próxima.");
+      console.error(`Vaga: ${job.link}`);
+      console.error(error);
+      console.log("");
+      continue;
+    }
 
     if (!pipelineResult.validation.valid) {
       discardedJobs++;
