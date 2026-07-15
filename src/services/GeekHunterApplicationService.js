@@ -126,6 +126,7 @@ class GeekHunterApplicationService {
     try {
       const page = await browser.newPage({ locale: "pt-BR" });
       const jobs = new Map();
+      const discoveredUrls = new Set();
       const maxPages = Number(process.env.GEEKHUNTER_MAX_PAGES) || 20;
 
       for (let pageNumber = 1; pageNumber <= maxPages; pageNumber++) {
@@ -151,23 +152,69 @@ class GeekHunterApplicationService {
             title: element.innerText.split("\n").map((item) => item.trim()).find(Boolean) || "",
           })),
         );
-        const previousSize = jobs.size;
+        const previousDiscoveredSize = discoveredUrls.size;
+        let eligibleJobs = 0;
 
         for (const card of cards) {
-          if (card.url) jobs.set(card.url, card);
+          if (!card.url) continue;
+
+          discoveredUrls.add(card.url);
+
+          if (!this.isQaJobTitle(card.title) || !this.isRemoteJobCard(card.text)) {
+            continue;
+          }
+
+          jobs.set(card.url, card);
+          eligibleJobs++;
         }
 
         console.log(
-          `Vagas encontradas na página: ${cards.length}; novas: ${jobs.size - previousSize}`,
+          `Vagas encontradas na página: ${cards.length}; QA remoto: ${eligibleJobs}`,
         );
 
-        if (cards.length === 0 || jobs.size === previousSize) break;
+        if (cards.length === 0 || discoveredUrls.size === previousDiscoveredSize) break;
       }
 
       return [...jobs.values()];
     } finally {
       await browser.close();
     }
+  }
+
+  isQaJobTitle(title) {
+    const normalizedTitle = String(title || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+
+    const qaTitlePatterns = [
+      /\bqa\b/,
+      /\bsdet\b/,
+      /\btester\b/,
+      /\bsoftware tester\b/,
+      /\bquality assurance\b/,
+      /\bquality engineer\b/,
+      /\bsoftware quality\b/,
+      /\banalista de qualidade\b/,
+      /\bgarantia de qualidade\b/,
+      /\banalista de testes?\b/,
+      /\bengenheir[oa] de testes?\b/,
+      /\bautomacao de testes?\b/,
+      /\btest automation\b/,
+      /\btest engineer\b/,
+      /\btest analyst\b/,
+    ];
+
+    return qaTitlePatterns.some((pattern) => pattern.test(normalizedTitle));
+  }
+
+  isRemoteJobCard(text) {
+    const normalizedText = String(text || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+
+    return /\bremot[oa]\b|\bremote\b|\bhome[ -]?office\b/.test(normalizedText);
   }
 
   async apply(url, { dryRun = true } = {}) {
